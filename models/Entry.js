@@ -6,6 +6,7 @@ const entrySchema = new mongoose.Schema({
   date: String,
   firmName: String,
   owner: String,
+  ownerName: String,
   phone: String,
   designation: String,
   clientStatus: String,

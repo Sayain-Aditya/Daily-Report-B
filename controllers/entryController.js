@@ -1,8 +1,10 @@
-import Entry from '../models/Entry.js';
+const isStatic = (id) => id === 'static_firm';
 
 export async function getEntries(req, res) {
   try {
-    const filter = req.isOwner ? { firmId: req.firmId } : { userId: req.userId };
+    const filter = req.isOwner
+      ? (isStatic(req.firmId) ? {} : { firmId: req.firmId })
+      : { userId: req.userId };
     const entries = await Entry.find(filter).sort({ createdAt: -1 }).lean();
     res.json(entries);
   } catch {
@@ -22,11 +24,10 @@ export async function createEntry(req, res) {
 
 export async function updateEntry(req, res) {
   try {
-    const entry = await Entry.findOneAndUpdate(
-      { _id: req.params.id, userId: req.userId },
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const filter = req.isOwner
+      ? (isStatic(req.firmId) ? { _id: req.params.id } : { _id: req.params.id, firmId: req.firmId })
+      : { _id: req.params.id, userId: req.userId };
+    const entry = await Entry.findOneAndUpdate(filter, req.body, { new: true, runValidators: true });
     if (!entry) return res.status(404).json({ error: 'Entry not found' });
     res.json(entry);
   } catch {
@@ -36,7 +37,10 @@ export async function updateEntry(req, res) {
 
 export async function deleteEntry(req, res) {
   try {
-    const result = await Entry.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    const filter = req.isOwner
+      ? (isStatic(req.firmId) ? { _id: req.params.id } : { _id: req.params.id, firmId: req.firmId })
+      : { _id: req.params.id, userId: req.userId };
+    const result = await Entry.findOneAndDelete(filter);
     if (!result) return res.status(404).json({ error: 'Entry not found' });
     res.json({ success: true });
   } catch {
