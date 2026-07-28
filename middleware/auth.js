@@ -22,3 +22,8 @@ export function auth(req, res, next) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+export function ownerOnly(req, res, next) {
+  if (!req.isOwner) return res.status(403).json({ error: 'Owner access only' });
+  next();
+}
