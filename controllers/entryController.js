@@ -1,3 +1,5 @@
+import Entry from '../models/Entry.js';
+
 const isStatic = (id) => id === 'static_firm';
 
 export async function getEntries(req, res) {
