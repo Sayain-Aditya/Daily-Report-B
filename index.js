@@ -17,13 +17,15 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-}));
-app.options('*', cors());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
@@ -31,11 +33,24 @@ app.use('/api/entries', entriesRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/firm', firmRouter);
 
-connectDatabase(process.env.MONGO_URI)
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error('Failed to connect to database:', err.message);
-    process.exit(1);
-  });
+// Connect DB once — cached across serverless invocations
+let dbConnected = false;
+app.use(async (req, res, next) => {
+  if (!dbConnected) {
+    try {
+      await connectDatabase(process.env.MONGO_URI);
+      dbConnected = true;
+    } catch (err) {
+      console.error('DB connection failed:', err.message);
+      return res.status(503).json({ error: 'Database unavailable, please retry' });
+    }
+  }
+  next();
+});
+
+// Local dev only — Vercel does not use app.listen()
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+export default app;
