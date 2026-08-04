@@ -28,25 +28,21 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
 
+// Connect DB BEFORE routes — must run first on every cold start
+app.use(async (req, res, next) => {
+  try {
+    await connectDatabase(process.env.MONGO_URI);
+    next();
+  } catch (err) {
+    console.error('DB connection failed:', err.message);
+    res.status(503).json({ error: 'Database unavailable, please retry' });
+  }
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/entries', entriesRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/firm', firmRouter);
-
-// Connect DB once — cached across serverless invocations
-let dbConnected = false;
-app.use(async (req, res, next) => {
-  if (!dbConnected) {
-    try {
-      await connectDatabase(process.env.MONGO_URI);
-      dbConnected = true;
-    } catch (err) {
-      console.error('DB connection failed:', err.message);
-      return res.status(503).json({ error: 'Database unavailable, please retry' });
-    }
-  }
-  next();
-});
 
 // Local dev only — Vercel does not use app.listen()
 if (process.env.NODE_ENV !== 'production') {
